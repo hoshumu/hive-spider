@@ -1,2 +1,3 @@
-# hive-spider
-对招标采购网的爬虫
+**代码基于新edge的selenium**
+1. 运行getcookies.py获取登录cookies
+2. 运行爬虫程序
