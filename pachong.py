@@ -1,7 +1,7 @@
 '''
 Author: asterisk
 Date: 2020-08-30 17:32:36
-LastEditTime: 2020-09-15 09:47:26
+LastEditTime: 2020-09-15 10:06:34
 LastEditors: Please set LastEditors
 Description: In User Settings Edit
 FilePath: /zhaobiao_pachong/pachong.py
@@ -17,7 +17,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-# from lxml import etree
+
+import urllib3
 
 driver = webdriver.Chrome()
 
@@ -30,7 +31,7 @@ driver.get('https://www.okcis.cn/search/')  # 打开网页
 for cookie in listCookies:
     driver.add_cookie(cookie)
 driver.refresh()
-# time.sleep(2)
+
 # 利用xpath输入文本，模拟点击
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[1]/div[1]/div[1]/input[2]').send_keys('环卫 保洁')
@@ -40,8 +41,15 @@ driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[5]/div[1]/label[7]/input').click()
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[6]/div[1]/label[8]/input').click()
+
+# 选择省份
+province_list = driver.find_elements_by_xpath("//div[@class='xb_20160118']/p")
+province_list[0].find_element_by_xpath("./label/input").click()
+
+# 开始搜索
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[3]/a').click()
+
 time.sleep(2)
 
 # 爬取内容
@@ -51,36 +59,38 @@ text=[]
 # try:
 iframe_element = driver.find_element_by_id('sosoIframe')
 driver.switch_to.frame(iframe_element)
-elements = driver.find_elements_by_xpath("//td[@name='result-list-title-td']/a")
 
 # Create a new Excel
 workbook = xlwt.Workbook(encoding='utf-8')
 worksheet = workbook.add_sheet('Result')
 
-lenth = len(elements)
-print(lenth)
+# lenth = len(elements)
+# print(lenth)
 worksheet.write(0, 0, label="招标内容（标名）")
 worksheet.write(0, 1, label="链接")
-for i in range (0,lenth):
-    title = elements[i].get_attribute('title')
-    url = elements[i].get_attribute('href')
-    worksheet.write(i + 1, 0, label=title)
-    worksheet.write(i + 1, 1, label=url)
 
-print(len(driver.find_elements_by_xpath("//a[@text='下一页']")))
-    # # 下面这个没有测试:(
-    # driver.find_element_by_class_name('fanye_li02_20140617').click()
-    # time.sleep(2)
+page_list = int(driver.find_element_by_xpath("//ul[@class='fanye_ul_20140617']/li[10]/a").get_attribute("text"))
+print(page_list)
+
+for j in range(0,page_list - 1):
+
+    time.sleep(8)
+    print(j)
+
+    elements = driver.find_elements_by_xpath("//td[@name='result-list-title-td']/a")
+    lenth = len(elements)
+    print(lenth)
+
+    for i in range (0,lenth):
+        
+        title = elements[i].get_attribute('title')
+        url = elements[i].get_attribute('href')
+        worksheet.write(i + 1 + lenth * j, 0, label=title)
+        worksheet.write(i + 1 + lenth * j, 1, label=url)
+
+    driver.find_elements_by_xpath("//a[text()='下一页']")[0].click()
 
 
-# except Exception as e:
-#     with open('result.json','wb') as f:
-#         #:(写入文件没有实现
-#         #json.dumps(text,f=f, ensure_ascii = False, indent = 4, sort_keys = True)
-# with open('html.txt', 'w') as f:
-#     f.write(source)
-# print(source)
-# time.sleep(3)
-# workbook.save('Result.xls')
-# time.sleep(20)
-driver.quit()
+workbook.save('Result.xls')
+time.sleep(10)
+# driver.quit()
