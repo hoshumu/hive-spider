@@ -19,6 +19,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 import urllib3
+import base64
+
+# get Token
+host = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=Va5yQRHlA4Fq5eR3LT0vuXV4&client_secret=0rDSjzQ20XUj5itV6WRtznPQSzr5pVw2&'
+
+api = 'https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic'
+access_token = ''
 
 driver = webdriver.Chrome()
 
@@ -27,7 +34,7 @@ with open('cookies.txt', 'r', encoding='utf8') as f:
     listCookies = json.loads(f.read())
 
 # Open website and login
-driver.get('https://www.okcis.cn/search/')  # 打开网页
+driver.get('https://www.okcis.cn/search/')# 打开网页
 for cookie in listCookies:
     driver.add_cookie(cookie)
 driver.refresh()
