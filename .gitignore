@@ -1,6 +1,6 @@
 /.vscode
+.DS_Store
 
 cookies.txt
 pwd.txt
 Result.xls
-
