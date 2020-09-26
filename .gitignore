@@ -1,6 +1,11 @@
 /.vscode
 .DS_Store
+/__pycache__
 
+history.txt
 cookies.txt
 pwd.txt
-Result.xls
+*.xls
+code.png
+
+account.py
