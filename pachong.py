@@ -70,9 +70,9 @@ except:
 
 # 利用xpath输入文本，模拟点击
 driver.find_element_by_xpath(
-    '/html/body/div[4]/div[2]/form/div/div[2]/div[1]/div[1]/div[1]/input[2]').send_keys('农村厕所管护')
-# driver.find_element_by_xpath(
-#     '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[4]/div[1]/input').send_keys('车 厕')
+    '/html/body/div[4]/div[2]/form/div/div[2]/div[1]/div[1]/div[1]/input[2]').send_keys('环卫')
+driver.find_element_by_xpath(
+    '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[4]/div[1]/input').send_keys('车 厕')
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[5]/div[1]/label[7]/input').click()
 driver.find_element_by_xpath(
@@ -171,14 +171,20 @@ for province_index in range(province_start, len(province_list)):
                         print("error!skip this item")
                         continue
                     try:
+                        date = driver.find_element_by_xpath(
+                            "//td[contains(text(),'更新时间')]/following-sibling::td[1]")
+                        worksheet.write(
+                            sheet_index, 5, label=date.get_attribute('textContent'))
+                    except:
+                        print('获取日期失败')
+                        worksheet.write(sheet_index, 5, label='未标出')
+                    try:
                         company = driver.find_element_by_xpath(
                             "//td[contains(text(),'中标候选')]/following-sibling::td[1]/div/a[1]")
-                        date = driver.find_element_by_xpath(
-                            "//td[contains(text(),'更新时间')]/following-sibling::td[1]/div/a[1]")
                     except:
+                        print('获取公司')
                         worksheet.write(sheet_index, 3, label='未标出')
                         worksheet.write(sheet_index, 4, label='未标出')
-                        worksheet.write(sheet_index, 5, label='未标出')
                         worksheet.write(sheet_index, 6, label='未标出')
                         worksheet.write(sheet_index, 7, label='未标出')
                     else:
@@ -186,17 +192,16 @@ for province_index in range(province_start, len(province_list)):
                             sheet_index, 3, label=company.get_attribute('textContent'))
                         worksheet.write(
                             sheet_index, 4, label=company.get_attribute('href'))
-                        worksheet.write(
-                            sheet_index, 5, label=date.get_attribute('textContent'))                            
                         try:
-                            windows = driver.window_handles
-                            driver.switch_to.window(windows[2])
                             driver.get(company.get_attribute('href'))
                             time.sleep(3)
-                            name = driver.find_element_by_xpath("//td/samp[@id='page3_con_1_name']").get_attribute('textContent')
-                            company_phone = driver.find_elements_by_xpath("//td/samp[@id='page3_con_2']").get_attribute('textContent')
-                            print(name, company_phone)
+                            name = driver.find_element_by_xpath(
+                                "//td/samp[@id='page3_con_1_name']").get_attribute('textContent')
+                            company_phone = driver.find_element_by_xpath(
+                                "//td/samp[@id='page3_con_2']").get_attribute('textContent')
+                            # print(name, company_phone)
                         except:
+                            print('获取公司联系人失败')
                             worksheet.write(sheet_index, 6, label='未标出')
                             worksheet.write(sheet_index, 7, label='未标出')
                         else:
@@ -219,7 +224,7 @@ for province_index in range(province_start, len(province_list)):
 
                     fo = open("./history.txt", "w")
                     fo.writelines(str(province_index) + '\n' + str(city_index) +
-                                    '\n' + str(j) + '\n' + str(i) + '\n' + str(sheet_index))
+                                  '\n' + str(j) + '\n' + str(i) + '\n' + str(sheet_index))
                     fo.close()
 
                 driver.find_elements_by_xpath("//a[text()='下一页']")[0].click()
