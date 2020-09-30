@@ -1,48 +1,41 @@
-'''
-Author: asterisk
-Date: 2020-08-30 17:32:36
-LastEditTime: 2020-09-15 10:06:34
-LastEditors: Please set LastEditors
-Description: In User Settings Edit
-FilePath: /zhaobiao_pachong/pachong.py
-'''
 # coding:utf-8
 import sys
 import time
 import json
-import requests
+
+# execl处理模块
 import xlwt
 import xlrd
 from xlutils.copy import copy
+
+# selenium模块
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
-import urllib3
-import base64
 
 # 读取设置的账号密码
 import account
 
 driver = webdriver.Chrome()
 driver.maximize_window()
+
+# 打开多个窗口
 js = 'window.open();'
 driver.execute_script(js)
 driver.execute_script(js)
 windows = driver.window_handles
 driver.switch_to.window(windows[0])
 
-# Read cookies (Get cookies first)
+# 读取Cookies并登录
 with open('cookies.txt', 'r', encoding='utf8') as f:
     listCookies = json.loads(f.read())
-
-# Open website and login
 driver.get('https://www.okcis.cn/search/')  # 打开网页
 for cookie in listCookies:
     driver.add_cookie(cookie)
 driver.refresh()
 
+# 尝试读取爬取历史
 try:
     with open('./history.txt', 'r') as f:
         province_start = int(f.readline())
@@ -68,27 +61,32 @@ except:
     workbook = xlwt.Workbook(encoding='utf-8')
     has_his = 0
 
-# 利用xpath输入文本，模拟点击
+# 搜索标题栏
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[1]/div[1]/div[1]/input[2]').send_keys('环卫')
+# 去掉关键字
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[4]/div[1]/input').send_keys('车 厕')
+# 点击中标结果btn
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[5]/div[1]/label[7]/input').click()
+# 点击一年内btn
 driver.find_element_by_xpath(
     '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[6]/div[1]/label[8]/input').click()
-# driver.find_element_by_xpath(
-#     "/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[2]/div[1]//label[2]/input").click()
+# 点击标题搜索btn
+driver.find_element_by_xpath(
+    "/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[2]/div[1]//label[2]/input").click()
 
 print("10秒后开始搜索")
 time.sleep(10)
 
-# 选择省份
+# 遍历省份列表
 province_list = driver.find_elements_by_xpath("//div[@class='xb_20160118']/p")
 print(len(province_list))
 
 for province_index in range(province_start, len(province_list)):
     try:
+        # 获得省份名
         province = driver.find_elements_by_xpath(
             "//div[@class='xb_20160118']/p")[province_index]
         province_name = province.find_element_by_xpath(
@@ -96,8 +94,12 @@ for province_index in range(province_start, len(province_list)):
         province.click()
         print(province_name)
         time.sleep(0.5)
+
+        # 获取城市列表
         city_list = driver.find_elements_by_xpath(
             "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")
+
+        # 读取到爬取历史特殊处理
         if not has_his:
             worksheet = workbook.add_sheet(province_name)
             worksheet.write(0, 0, label="招标内容（标名）")
@@ -116,11 +118,11 @@ for province_index in range(province_start, len(province_list)):
 
     for city_index in range(city_start, len(city_list)):
         try:
+            # 获取城市名
             print(len(driver.find_elements_by_xpath(
                 "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")), city_index)
             city = driver.find_elements_by_xpath(
                 "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index]
-
             city.click()
             time.sleep(1)
             city_name = city.find_element_by_xpath(
@@ -132,14 +134,11 @@ for province_index in range(province_start, len(province_list)):
                 "//div[@class='ljss_20160118']").click()
             time.sleep(8)
 
-            # 爬取内容
-            text = []
-
-            # 定位iframe，暂时没有实现自动翻页
-
+            # 定位iframe
             iframe_element = driver.find_element_by_id('sosoIframe')
             driver.switch_to.frame(iframe_element)
 
+            # 获取页数
             page_list = int(driver.find_element_by_xpath(
                 "//ul[@class='fanye_ul_20140617']/li[last()-2]/a").get_attribute("text"))
             print(page_list)
@@ -149,20 +148,24 @@ for province_index in range(province_start, len(province_list)):
                 time.sleep(8)
                 print(page_start, j, page_list)
 
+                # 超过20页特殊处理
                 if j >= 19:
                     break
-
+                
+                # 获取单页项目列表
                 elements = driver.find_elements_by_xpath(
                     "//td[@name='result-list-title-td']/a")
 
                 for i in range(item_start, len(elements)):
                     try:
+                        # 获取单个项目信息
                         title = elements[i].get_attribute('title')
                         url = elements[i].get_attribute('href')
                         worksheet.write(sheet_index, 0, label=title)
                         worksheet.write(sheet_index, 1, label=url)
                         worksheet.write(sheet_index, 2, label=city_name)
 
+                        # 打开新窗口并跳转项目详细信息
                         windows = driver.window_handles
                         driver.switch_to.window(windows[1])
                         driver.get(url)
@@ -171,6 +174,7 @@ for province_index in range(province_start, len(province_list)):
                         print("error!skip this item")
                         continue
                     try:
+                        # 获取时间信息
                         date = driver.find_element_by_xpath(
                             "//td[contains(text(),'更新时间')]/following-sibling::td[1]")
                         worksheet.write(
@@ -179,6 +183,7 @@ for province_index in range(province_start, len(province_list)):
                         print('获取日期失败')
                         worksheet.write(sheet_index, 5, label='未标出')
                     try:
+                        # 获取公司信息
                         company = driver.find_element_by_xpath(
                             "//td[contains(text(),'中标候选')]/following-sibling::td[1]/div/a[1]")
                     except:
@@ -193,6 +198,7 @@ for province_index in range(province_start, len(province_list)):
                         worksheet.write(
                             sheet_index, 4, label=company.get_attribute('href'))
                         try:
+                            # 打开公司页面并获取公司联系信息
                             driver.get(company.get_attribute('href'))
                             time.sleep(3)
                             name = driver.find_element_by_xpath(
@@ -210,6 +216,7 @@ for province_index in range(province_start, len(province_list)):
                             worksheet.write(
                                 sheet_index, 7, label=company_phone)
 
+                    # 保存数据表并初始化读取历史变量
                     workbook.save('Result.xls')
                     has_his = 0
                     province_start = 0
@@ -222,15 +229,19 @@ for province_index in range(province_start, len(province_list)):
                     driver.switch_to.frame(iframe_element)
                     sheet_index = sheet_index + 1
 
+                    # 记录爬取历史以便断电继续工作
                     fo = open("./history.txt", "w")
                     fo.writelines(str(province_index) + '\n' + str(city_index) +
                                   '\n' + str(j) + '\n' + str(i) + '\n' + str(sheet_index))
                     fo.close()
 
+                # 点击翻页btn
                 driver.find_elements_by_xpath("//a[text()='下一页']")[0].click()
 
+            # 退出iframe
             driver.switch_to.parent_frame()
 
+            # 点击上个城市btn
             time.sleep(0.5)
             last_city = driver.find_elements_by_xpath(
                 "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index].click()
@@ -250,4 +261,4 @@ for province_index in range(province_start, len(province_list)):
 
     # time.sleep(0.5)
 time.sleep(10)
-# driver.quit()
+driver.quit()
