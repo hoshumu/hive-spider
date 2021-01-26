@@ -43,7 +43,7 @@ try:
         page_start = int(f.readline())
         item_start = int(f.readline())
         sheet_index = int(f.readline())
-        print(province_start, city_start, page_start, item_start)
+        print(province_start, city_start, page_start, item_start, sheet_index)
         f.close()
     workbook = copy(xlrd.open_workbook('./Result.xls'))
     worksheet = workbook.get_sheet(-1)  # 获取工作簿中所有表格中的的第一个表格
@@ -61,21 +61,26 @@ except:
     workbook = xlwt.Workbook(encoding='utf-8')
     has_his = 0
 
+time.sleep(5)
+
+# 关闭弹出广告
+# driver.find_element_by_xpath("//a[@class='layui-layer-ico layui-layer-close layui-layer-close2']").click()
+
 # 搜索标题栏
 driver.find_element_by_xpath(
-    '/html/body/div[4]/div[2]/form/div/div[2]/div[1]/div[1]/div[1]/input[2]').send_keys('环卫')
+    "//input[@bmpartnum='keyword1']").send_keys('智慧园林')
 # 去掉关键字
-driver.find_element_by_xpath(
-    '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[4]/div[1]/input').send_keys('车 厕')
+# driver.find_element_by_xpath(
+#     "//input[@bmpartnum='qdgjz']").send_keys('车 厕')
 # 点击中标结果btn
 driver.find_element_by_xpath(
-    '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[5]/div[1]/label[7]/input').click()
+    "//input[@bmpartnum='xxlx_rn']").click()
 # 点击一年内btn
 driver.find_element_by_xpath(
-    '/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[6]/div[1]/label[8]/input').click()
+    "//input[@bmpartnum='sssj_6']").click()
 # 点击标题搜索btn
 driver.find_element_by_xpath(
-    "/html/body/div[4]/div[2]/form/div/div[2]/div[2]/div[2]/div[1]//label[2]/input").click()
+    "//input[@bmpartnum='ssfs_bt']").click()
 
 print("10秒后开始搜索")
 time.sleep(10)
@@ -112,150 +117,164 @@ for province_index in range(province_start, len(province_list)):
             worksheet.write(0, 7, label="联系电话")
             sheet_index = 1
 
-    except:
-        print("error!skip this province")
-        continue
+    # for city_index in range(city_start, len(city_list)):
+    #     try:
+    #         # 获取城市名
+    #         print(len(driver.find_elements_by_xpath(
+    #             "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")), city_index)
+    #         city = driver.find_elements_by_xpath(
+    #             "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index]
+    #         city.click()
+    #         time.sleep(1)
+    #         city_name = city.find_element_by_xpath(
+    #             "./span").get_attribute("textContent")
+    #         print(city_name)
 
-    for city_index in range(city_start, len(city_list)):
-        try:
-            # 获取城市名
-            print(len(driver.find_elements_by_xpath(
-                "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")), city_index)
-            city = driver.find_elements_by_xpath(
-                "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index]
-            city.click()
-            time.sleep(1)
-            city_name = city.find_element_by_xpath(
-                "./span").get_attribute("textContent")
-            print(city_name)
+        # 开始搜索
+        driver.find_element_by_xpath(
+            "//div[@class='ljss_20160118']").click()
+        time.sleep(8)
 
-            # 开始搜索
-            driver.find_element_by_xpath(
-                "//div[@class='ljss_20160118']").click()
+        # 定位iframe
+        iframe_element = driver.find_element_by_id('sosoIframe')
+        driver.switch_to.frame(iframe_element)
+
+        # 获取页数
+        page_list = int(driver.find_element_by_xpath(
+            "//ul[@class='fanye_ul_20140617']/li[last()-2]/a").get_attribute("text"))
+        print(page_list)
+
+        for j in range(page_start, page_list):
+
             time.sleep(8)
+            print(page_start, j, page_list)
 
-            # 定位iframe
-            iframe_element = driver.find_element_by_id('sosoIframe')
-            driver.switch_to.frame(iframe_element)
+            # 超过20页特殊处理
+            if j >= 19:
+                break
+            
+            # 获取单页项目列表
+            elements = driver.find_elements_by_xpath(
+                "//td[@name='result-list-title-td']/a")
 
-            # 获取页数
-            page_list = int(driver.find_element_by_xpath(
-                "//ul[@class='fanye_ul_20140617']/li[last()-2]/a").get_attribute("text"))
-            print(page_list)
+            for i in range(item_start, len(elements)):
+                try:
+                    # 获取单个项目信息
+                    title = elements[i].get_attribute('title')
+                    url = elements[i].get_attribute('href')
+                    worksheet.write(sheet_index, 0, label=title)
+                    worksheet.write(sheet_index, 1, label=url)
+                    # worksheet.write(sheet_index, 2, label=city_name)
 
-            for j in range(page_start, page_list):
-
-                time.sleep(8)
-                print(page_start, j, page_list)
-
-                # 超过20页特殊处理
-                if j >= 19:
-                    break
-                
-                # 获取单页项目列表
-                elements = driver.find_elements_by_xpath(
-                    "//td[@name='result-list-title-td']/a")
-
-                for i in range(item_start, len(elements)):
+                    # 打开新窗口并跳转项目详细信息
+                    windows = driver.window_handles
+                    driver.switch_to.window(windows[1])
+                    driver.get(url)
+                    time.sleep(3)
+                except:
+                    print("error!skip this item")
+                    continue
+                try:
+                    # 获取时间信息
+                    date = driver.find_element_by_xpath(
+                        "//td[contains(text(),'更新时间')]/following-sibling::td[1]")
+                    worksheet.write(
+                        sheet_index, 5, label=date.get_attribute('textContent'))
+                except:
+                    print('获取日期失败')
+                    worksheet.write(sheet_index, 5, label='未标出')
+                try:
+                    # 获取公司信息
+                    company = driver.find_element_by_xpath(
+                        "//td[contains(text(),'中标候选')]/following-sibling::td[1]/div/a[1]")
+                except:
+                    print('获取公司')
+                    worksheet.write(sheet_index, 3, label='未标出')
+                    worksheet.write(sheet_index, 4, label='未标出')
+                    worksheet.write(sheet_index, 6, label='未标出')
+                    worksheet.write(sheet_index, 7, label='未标出')
+                else:
+                    worksheet.write(
+                        sheet_index, 3, label=company.get_attribute('textContent'))
+                    worksheet.write(
+                        sheet_index, 4, label=company.get_attribute('href'))
                     try:
-                        # 获取单个项目信息
-                        title = elements[i].get_attribute('title')
-                        url = elements[i].get_attribute('href')
-                        worksheet.write(sheet_index, 0, label=title)
-                        worksheet.write(sheet_index, 1, label=url)
-                        worksheet.write(sheet_index, 2, label=city_name)
-
-                        # 打开新窗口并跳转项目详细信息
-                        windows = driver.window_handles
-                        driver.switch_to.window(windows[1])
-                        driver.get(url)
+                        # 打开公司页面并获取公司联系信息
+                        driver.get(company.get_attribute('href'))
                         time.sleep(3)
+                        name = driver.find_element_by_xpath(
+                            "//td/samp[@id='page3_con_1_name']").get_attribute('textContent')
+                        company_phone = driver.find_element_by_xpath(
+                            "//td/samp[@id='page3_con_2']").get_attribute('textContent')
+                        # print(name, company_phone)
                     except:
-                        print("error!skip this item")
-                        continue
-                    try:
-                        # 获取时间信息
-                        date = driver.find_element_by_xpath(
-                            "//td[contains(text(),'更新时间')]/following-sibling::td[1]")
-                        worksheet.write(
-                            sheet_index, 5, label=date.get_attribute('textContent'))
-                    except:
-                        print('获取日期失败')
-                        worksheet.write(sheet_index, 5, label='未标出')
-                    try:
-                        # 获取公司信息
-                        company = driver.find_element_by_xpath(
-                            "//td[contains(text(),'中标候选')]/following-sibling::td[1]/div/a[1]")
-                    except:
-                        print('获取公司')
-                        worksheet.write(sheet_index, 3, label='未标出')
-                        worksheet.write(sheet_index, 4, label='未标出')
+                        print('获取公司联系人失败')
                         worksheet.write(sheet_index, 6, label='未标出')
                         worksheet.write(sheet_index, 7, label='未标出')
                     else:
                         worksheet.write(
-                            sheet_index, 3, label=company.get_attribute('textContent'))
+                            sheet_index, 6, label=name)
                         worksheet.write(
-                            sheet_index, 4, label=company.get_attribute('href'))
-                        try:
-                            # 打开公司页面并获取公司联系信息
-                            driver.get(company.get_attribute('href'))
-                            time.sleep(3)
-                            name = driver.find_element_by_xpath(
-                                "//td/samp[@id='page3_con_1_name']").get_attribute('textContent')
-                            company_phone = driver.find_element_by_xpath(
-                                "//td/samp[@id='page3_con_2']").get_attribute('textContent')
-                            # print(name, company_phone)
-                        except:
-                            print('获取公司联系人失败')
-                            worksheet.write(sheet_index, 6, label='未标出')
-                            worksheet.write(sheet_index, 7, label='未标出')
-                        else:
-                            worksheet.write(
-                                sheet_index, 6, label=name)
-                            worksheet.write(
-                                sheet_index, 7, label=company_phone)
+                            sheet_index, 7, label=company_phone)
 
-                    # 保存数据表并初始化读取历史变量
-                    workbook.save('Result.xls')
-                    has_his = 0
-                    province_start = 0
-                    city_start = 0
-                    page_start = 0
-                    item_start = 0
-                    windows = driver.window_handles
-                    driver.switch_to.window(windows[0])
-                    iframe_element = driver.find_element_by_id('sosoIframe')
-                    driver.switch_to.frame(iframe_element)
-                    sheet_index = sheet_index + 1
+                # 保存数据表并初始化读取历史变量
+                workbook.save('Result.xls')
+                has_his = 0
+                province_start = 0
+                city_start = 0
+                page_start = 0
+                item_start = 0
+                windows = driver.window_handles
+                driver.switch_to.window(windows[0])
+                iframe_element = driver.find_element_by_id('sosoIframe')
+                driver.switch_to.frame(iframe_element)
+                sheet_index = sheet_index + 1
 
-                    # 记录爬取历史以便断电继续工作
-                    fo = open("./history.txt", "w")
-                    fo.writelines(str(province_index) + '\n' + str(city_index) +
-                                  '\n' + str(j) + '\n' + str(i) + '\n' + str(sheet_index))
-                    fo.close()
+                # 记录爬取历史以便断电继续工作
+                fo = open("./history.txt", "w")
+                fo.writelines(str(province_index) 
+                # + '\n' + str(city_index) 
+                + '\n' + '0'
+                + '\n' + str(j) + '\n' + str(i) + '\n' + str(sheet_index))
+                fo.close()
 
-                # 点击翻页btn
-                driver.find_elements_by_xpath("//a[text()='下一页']")[0].click()
+            # 点击翻页btn
+            driver.find_elements_by_xpath("//a[text()='下一页']")[0].click()
 
-            # 退出iframe
-            driver.switch_to.parent_frame()
+        # 退出iframe
+        driver.switch_to.parent_frame()
 
-            # 点击上个城市btn
-            time.sleep(0.5)
-            last_city = driver.find_elements_by_xpath(
-                "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index].click()
-            time.sleep(1)
+        # 点击上个城市btn
+        # time.sleep(0.5)
+        # last_city = driver.find_elements_by_xpath(
+        #     "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index].click()
+        # time.sleep(1)
 
-        except:
-            print("error!skip this city")
-            driver.switch_to.parent_frame()
-            time.sleep(0.5)
-            last_city = driver.find_elements_by_xpath(
-                "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index].click()
-            time.sleep(1)
-            workbook.save('Result.xls')
-            continue
+        print(province_index)
+        # 点击上个省份btn
+        time.sleep(0.5)
+        last_province = driver.find_elements_by_xpath("//div[@class='xb_20160118']/p")[province_index].click()
+        time.sleep(1)
+
+    except:
+        print("error!skip this province")
+        driver.switch_to.parent_frame()
+        time.sleep(0.5)
+        # last_city = driver.find_elements_by_xpath("//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index].click()
+        last_province = driver.find_elements_by_xpath("//div[@class='xb_20160118']/p")[province_index].click()
+        time.sleep(1)
+        workbook.save('Result.xls')
+        continue
+
+        # except:
+        #     print("error!skip this city")
+        #     driver.switch_to.parent_frame()
+        #     time.sleep(0.5)
+        #     last_city = driver.find_elements_by_xpath(
+        #         "//div[@class='sj_d_20160118']/div[last()]//label[@class='sdq_qbf_20160118']")[city_index].click()
+        #     time.sleep(1)
+        #     workbook.save('Result.xls')
+        #     continue
 
     # last_province = driver.find_elements_by_xpath("//div[@class='xb_20160118']/p")[province_index].click()
 
